@@ -2,19 +2,29 @@
 The primary function for finding VFCs for a given security advisory
 Returns a set of five potential VFCs for the advisory
 """
+
+import argparse
 import json
+from pathlib import Path
+
+import numpy as np
 import pandas as pd
 import torch
-import numpy as np
 import xgboost as xgb
-import argparse
 
-from pathlib import Path
-from vfcfinder.utils import osv_helper, git_helper
-from vfcfinder.features import vfc_identification, static_features, semantic_similarity
+from vfcfinder.features import semantic_similarity, static_features, vfc_identification
+from vfcfinder.utils import git_helper, osv_helper
 
 
-def rank(advisory_path: str, clone_path: str, return_results=False, output_path=None):
+def rank(
+    repo_url: str,
+    advisory_path: str,
+    clone_path: str,
+    repo_fix_tag: str,
+    repo_vuln_tag: str,
+    return_results=False,
+    output_path=None,
+):
     """Ranks commits in relevance to a given security advisory
 
     Args:
@@ -46,9 +56,6 @@ def rank(advisory_path: str, clone_path: str, return_results=False, output_path=
     # create a dataframe that's easier to handle
     parsed_df = parsed[1].copy()
 
-    # identify the repo_url
-    repo_url = parsed[0]["reference_url"][parsed[0]["reference_type"].index("PACKAGE")]
-
     # extract the base repo owner/name
     repo_owner = repo_url.split("/")[-2]
     repo_name = repo_url.split("/")[-1]
@@ -62,10 +69,6 @@ def rank(advisory_path: str, clone_path: str, return_results=False, output_path=
     git_helper.clone_repo(
         repo_owner=repo_owner, repo_name=repo_name, clone_path=CLONE_DIRECTORY
     )
-
-    #####################################################################################
-    # find fixed/vulnerable version
-    fix_tag = parsed[1].fixed.iloc[-1]
 
     #####################################################################################
     # load the OWASP Lookup table and map
@@ -88,19 +91,6 @@ def rank(advisory_path: str, clone_path: str, return_results=False, output_path=
     parsed_df = parsed_df.merge(
         owasp_data[["owasp_rank", "cwe_ids", "label"]], on="cwe_ids", how="left"
     )
-
-    #####################################################################################
-    # get the prior and fixed tag of the local repo
-    tags = git_helper.get_prior_tag(
-        repo_owner=repo_owner,
-        repo_name=repo_name,
-        clone_path=CLONE_DIRECTORY,
-        target_tag=fix_tag,
-    )
-
-    # set the vulnerable/fixed tags
-    repo_vuln_tag = tags["prior_tag"]
-    repo_fix_tag = tags["current_tag"]
 
     #####################################################################################
     # load all commits
@@ -236,9 +226,9 @@ def rank(advisory_path: str, clone_path: str, return_results=False, output_path=
     #             ),
     #         ]
     #     )
-        
+
     print("Generating semantic similarity scores...")
-        
+
     # batch all the commits for a semantic similarity
     commits["semantic_similarity"] = semantic_similarity.semantic_similarity_batch(
         temp_commits=commits.copy(), advisory_details=parsed[0]["details"]
@@ -316,10 +306,10 @@ def rank(advisory_path: str, clone_path: str, return_results=False, output_path=
             f" Commit Message: {row.message[:40]} || "
             f"VFC Prob: {round(row.vfc_prob, 2)}"
         )
-    
+
     # save results
     if output_path is not None:
-        commits.to_csv(output_path, encoding='utf-8', index=False)
+        commits.to_csv(output_path, encoding="utf-8", index=False)
 
     # return results for later use
     if return_results:
