@@ -67,9 +67,12 @@ def rank(
     #####################################################################################
     # clone repo
     print(f"\nCloning repository: {repo_owner}/{repo_name}")
-    git_helper.clone_repo(
-        repo_owner=repo_owner, repo_name=repo_name, clone_path=CLONE_DIRECTORY
-    )
+    try:
+        git_helper.clone_repo(
+            repo_owner=repo_owner, repo_name=repo_name, clone_path=CLONE_DIRECTORY
+        )
+    except:
+        pass
 
     #####################################################################################
     # load the OWASP Lookup table and map
@@ -94,14 +97,14 @@ def rank(
     )
 
     # Tags
-    repo = git.Repo(clone_path)
+    repo = git.Repo(CLONE_PATH)
     tags = repo.tags
 
     #####################################################################################
     # load all commits
     commits = git_helper.get_commits_between_tags(
-        prior_tag=tags[repo_vuln_tag],
-        current_tag=tags[repo_fix_tag],
+        prior_tag=tags[repo_vuln_tag].object.hexsha,
+        current_tag=tags[repo_fix_tag].object.hexsha,
         temp_repo_path=CLONE_PATH,
     )
 
