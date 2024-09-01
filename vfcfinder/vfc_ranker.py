@@ -7,6 +7,7 @@ import argparse
 import json
 from pathlib import Path
 
+import git
 import numpy as np
 import pandas as pd
 import torch
@@ -92,11 +93,15 @@ def rank(
         owasp_data[["owasp_rank", "cwe_ids", "label"]], on="cwe_ids", how="left"
     )
 
+    # Tags
+    repo = git.Repo(clone_path)
+    tags = repo.tags
+
     #####################################################################################
     # load all commits
     commits = git_helper.get_commits_between_tags(
-        prior_tag=repo_vuln_tag,
-        current_tag=repo_fix_tag,
+        prior_tag=tags[repo_vuln_tag],
+        current_tag=tags[repo_fix_tag],
         temp_repo_path=CLONE_PATH,
     )
 
