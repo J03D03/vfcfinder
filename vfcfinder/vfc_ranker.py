@@ -91,6 +91,9 @@ def rank(
         how="left",
     )
 
+    if "cwe_ids" not in parsed_df:
+        parsed_df["cwe_ids"] = pd.NA
+
     # set the parsed owasp_label
     parsed_df = parsed_df.merge(
         owasp_data[["owasp_rank", "cwe_ids", "label"]], on="cwe_ids", how="left"

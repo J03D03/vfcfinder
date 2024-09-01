@@ -1,7 +1,9 @@
 """
 Helper functions to read OSV formats
 """
+
 import json
+
 import pandas as pd
 
 
@@ -83,16 +85,20 @@ def parse_osv(osv_json_filename: str, osv_schema: dict) -> dict:
                             )
 
                             affected_ranges["fixed"] = affected_ranges.apply(
-                                lambda x: x["events"][1]["fixed"]
-                                if "fixed" in str(x["events"])
-                                else None,
+                                lambda x: (
+                                    x["events"][1]["fixed"]
+                                    if "fixed" in str(x["events"])
+                                    else None
+                                ),
                                 axis=1,
                             )
 
                             affected_ranges["limit"] = affected_ranges.apply(
-                                lambda x: x["events"][1]["limit"]
-                                if "limit" in str(x["events"])
-                                else None,
+                                lambda x: (
+                                    x["events"][1]["limit"]
+                                    if "limit" in str(x["events"])
+                                    else None
+                                ),
                                 axis=1,
                             )
 
@@ -120,10 +126,13 @@ def parse_osv(osv_json_filename: str, osv_schema: dict) -> dict:
         elif osv_keys[key]["type"] == "object":
             if key == "database_specific":
                 if key in osv_json:
-                    osv_parsed["cwe_ids"] = osv_json[key]["cwe_ids"]
-                    osv_parsed["severity"] = osv_json[key]["severity"]
-                    # TODO: Handle all CWEs instead of just the first one listed
-                    affected_base["cwe_ids"] = osv_json[key]["cwe_ids"][0]
+                    if "severity" in osv_json[key]:
+                        osv_parsed["severity"] = osv_json[key]["severity"]
+                    if "cwe_ids" in osv_json[key]:
+                        osv_parsed["cwe_ids"] = osv_json[key]["cwe_ids"]
+                        if len(osv_json[key]["cwe_ids"]) > 0:
+                            # TODO: Handle all CWEs instead of just the first one listed
+                            affected_base["cwe_ids"] = osv_json[key]["cwe_ids"][0]
                 else:
                     osv_parsed["cwe_ids"] = None
                     osv_parsed["severity"] = None
